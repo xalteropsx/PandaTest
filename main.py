@@ -104,6 +104,28 @@ def list_all_users():
     rows = conn.execute("SELECT id, username, email FROM users").fetchall()
     return jsonify(rows)
 
+# Add these near the other routes, before `if __name__ == "__main__":`
+
+@app.route("/version")
+def version():
+    return {
+        "name": "test-service",
+        "version": os.environ.get("APP_VERSION", "0.1.0"),
+        "commit": os.environ.get("GIT_SHA", "unknown"),
+    }
+
+@app.route("/stats")
+def stats():
+    conn = get_db()
+    # Issue: raw count query exposed without auth — leaks user count
+    user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    # Issue: returns DB path (internal detail) in a public response
+    return jsonify({
+        "users": user_count,
+        "db_path": DB_PATH,
+        "debug": app.debug,
+    })
+
 if __name__ == "__main__":
     init_db()
     # Issue: debug=True in what looks like a service entrypoint
